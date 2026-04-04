@@ -1,29 +1,61 @@
-name: Python ML CI
+name: ML System Self-Hosted CI/CD
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, dev ]
 
 jobs:
-  build-and-test:
-      runs-on: self-hosted
-    steps:
-    - uses: actions/checkout@v4
+  # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
+  test:
+    name: Kiểm thử hệ thống
+    runs-on: self-hosted
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run Tests
-      run: |
-        # Chạy test API
-        # Lưu ý: Cần tạo mock model nếu muốn chạy hoàn chỉnh trên GitHub CI
-        python -m pytest tests/test_api_pytest.py
+    steps:
+      - name: Lấy mã nguồn mới nhất
+        uses: actions/checkout@v4
+
+      - name: Cài đặt thư viện và Khởi tạo Mock Data
+        run: |
+          pip install -r requirements.txt
+          pip install pytest httpx
+          # Tạo dữ liệu giả để vượt qua kiểm tra khi chưa có file model thật
+          mkdir -p models
+          python3 -c "
+          import joblib, sklearn.ensemble, shap, sklearn.preprocessing;
+          model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]);
+          joblib.dump(model, 'models/best_model.pkl');
+          explainer = shap.TreeExplainer(model);
+          joblib.dump(explainer, 'models/shap_explainer.pkl');
+          joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl');
+          joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');
+          "
+
+      - name: Chạy Pytest
+        run: python3 -m pytest tests/test_api_pytest.py -v
+
+  # GIAI ĐOẠN 2: ĐÓNG GÓI & TRIỂN KHAI (BUILD & DEPLOY)
+  deploy:
+    name: Đóng gói và Triển khai
+    runs-on: self-hosted
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Xây dựng Docker Image
+        run: docker build -t churn-prediction-app:latest .
+
+      - name: Cập nhật Container hệ thống
+        run: |
+          # Dừng và xóa container cũ nếu đang chạy
+          docker stop churn-container || true
+          docker rm churn-container || true
+          # Chạy container mới
+          docker run -d --name churn-container -p 8000:8000 --restart unless-stopped churn-prediction-app:latest
+          
+      - name: Kiểm tra trạng thái triển khai
+        run: |
+          sleep 5
+          curl -f http://localhost:8000/ || exit 1
+          echo "Triển khai thành công!"
