@@ -1,0 +1,16 @@
+pandas
+numpy
+scikit-learn==1.7.2
+requests
+matplotlib
+seaborn
+mlflow
+lightgbm==4.6.0
+joblib
+fastapi
+uvicorn
+pydantic
+pytest
+httpx
+shap
+prometheus_client

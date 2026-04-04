@@ -1,0 +1,11 @@
+
+venv/
+.venv/
+pycache/
+data/raw/*
+data/processed/*
+mlruns/
+models/.pkl
+models/.joblib
+.DS_Store
+Thumbs.db

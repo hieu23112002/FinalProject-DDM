@@ -1,0 +1,176 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "options": {
+        "content": "**Đọc nhanh:** Mỗi lần bạn gọi `POST /predict`, counter `churn_api_predictions_total` tăng 1. Biểu đồ latency là thời gian xử lý một request (giây). Nếu không thấy đường line: gọi `/predict` vài lần, đợi ~15s (Prometheus scrape), chọn time range **Last 15 minutes**.",
+        "mode": "markdown"
+      },
+      "title": "Hướng dẫn (đọc panel này trước)",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+      "description": "Tổng số request đến endpoint dự đoán từ lúc API khởi động (không giảm).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 3 },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+          "expr": "churn_api_predictions_total",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "1) Đã gọi bao nhiêu lần /predict?",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+      "description": "1 = Prometheus kết nối được tới API metrics. 0 = API hoặc mạng Docker lỗi.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 3 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+          "expr": "up{job=\"churn-api-service\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "2) Prometheus có scrape được API? (1 = có, 0 = không)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+      "description": "Trung bình thời gian xử lý một request /predict (giây). Càng thấp càng nhanh.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 3 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+          "expr": "rate(churn_api_latency_seconds_sum[5m]) / rate(churn_api_latency_seconds_count[5m])",
+          "legendFormat": "Latency TB (5m)",
+          "refId": "A"
+        }
+      ],
+      "title": "3) Độ trễ xử lý /predict (giây)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+      "description": "Đường đi lên = bạn đang gọi API. Nằm ngang = không có request mới.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 11 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
+          "expr": "churn_api_predictions_total",
+          "legendFormat": "Tổng lượt (luôn tăng)",
+          "refId": "A"
+        }
+      ],
+      "title": "4) Lịch sử: tổng lượt predict theo thời gian",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["churn", "ddm501"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Churn API — Giám sát (dễ hiểu)",
+  "uid": "churn-api-de-hieu",
+  "version": 1
+}
