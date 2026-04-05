@@ -26,12 +26,12 @@ jobs:
           if (!(Test-Path "models")) { New-Item -ItemType Directory -Path "models" }
           
           # Sinh lại Mock Data bằng phiên bản thư viện hiện tại
-          python -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
+          py -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
 
       - name: Chạy Pytest
         continue-on-error: true
         shell: powershell
-        run: python -m pytest tests/test_api_pytest.py -v
+        run: py -m pytest tests/test_api_pytest.py -v
 
   # GIAI ĐOẠN 2: BUILD & DEPLOY TOÀN BỘ STACK
   deploy:
@@ -47,8 +47,6 @@ jobs:
       - name: Deploy toàn bộ Stack bằng Docker Compose
         shell: powershell
         run: |
-          Write-Host "Updating full ML System Stack (API + Monitoring)..."
-          # Lệnh này sẽ build lại API và tự động bật Prometheus/Grafana nếu chúng đang tắt
           # --remove-orphans giúp dọn dẹp các container rác cũ
           docker compose up -d --build --remove-orphans
 
