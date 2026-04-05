@@ -7,6 +7,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
+  # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
   test:
     name: Kiểm thử hệ thống
     runs-on: self-hosted
@@ -18,9 +19,13 @@ jobs:
         continue-on-error: true
         shell: powershell
         run: |
+          # Đồng bộ phiên bản scikit-learn để tránh lỗi InconsistentVersionWarning
           python -m pip install --upgrade pip
-          pip install pytest httpx scikit-learn joblib shap --user
+          pip install pytest httpx scikit-learn==1.0.0 joblib shap --user
+          
           if (!(Test-Path "models")) { New-Item -ItemType Directory -Path "models" }
+          
+          # Sinh lại Mock Data bằng phiên bản thư viện hiện tại
           python -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
 
       - name: Chạy Pytest
@@ -28,8 +33,9 @@ jobs:
         shell: powershell
         run: python -m pytest tests/test_api_pytest.py -v
 
+  # GIAI ĐOẠN 2: BUILD & DEPLOY TOÀN BỘ STACK
   deploy:
-    name: Đóng gói và Triển khai Local (Compose)
+    name: Đóng gói và Triển khai Local
     runs-on: self-hosted
     needs: test
     if: always() && github.ref == 'refs/heads/main'
@@ -38,25 +44,31 @@ jobs:
       - name: Lấy mã nguồn mới nhất
         uses: actions/checkout@v4
 
-      - name: Deploy bằng Docker Compose
+      - name: Deploy toàn bộ Stack bằng Docker Compose
         shell: powershell
         run: |
-          Write-Host "Rebuilding churn-api service and updating stack..."
-          # Chỉ build và restart duy nhất service churn-api để không làm gián đoạn Prometheus/Grafana
-          docker compose up -d --build churn-api
+          Write-Host "Updating full ML System Stack (API + Monitoring)..."
+          # Lệnh này sẽ build lại API và tự động bật Prometheus/Grafana nếu chúng đang tắt
+          # --remove-orphans giúp dọn dẹp các container rác cũ
+          docker compose up -d --build --remove-orphans
 
-      - name: Kiểm tra trạng thái
+      - name: Kiểm tra trạng thái hệ thống
         shell: powershell
         run: |
-          Start-Sleep -Seconds 10
-          # Kiểm tra xem service có đang Up không
-          $status = docker ps --filter "name=churn_api_service" --filter "status=running" -q
-          if ($status) {
+          Start-Sleep -Seconds 15
+          Write-Host "--- Danh sách các container đang chạy ---"
+          docker compose ps
+          
+          # Kiểm tra container API chính
+          $api_status = docker ps --filter "name=churn_api_service" --filter "status=running" -q
+          if ($api_status) {
               Write-Host "------------------------------------------------"
               Write-Host "DEPLOY SUCCESSFUL!"
-              Write-Host "App is running and Monitoring can see it."
+              Write-Host "App: http://localhost:8000"
+              Write-Host "Grafana: http://localhost:3000"
+              Write-Host "Prometheus: http://localhost:9090"
               Write-Host "------------------------------------------------"
           } else {
-              Write-Host "Deployment failed!"
+              Write-Host "DEPLOY FAILED: churn_api_service is not running!"
               exit 1
           }
