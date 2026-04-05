@@ -9,6 +9,8 @@ services:
     volumes:
       - .:/app
     restart: always
+    networks:
+      - ml_network
 
   prometheus:
     image: prom/prometheus:latest
@@ -23,6 +25,8 @@ services:
     depends_on:
       - churn-api
     restart: always
+    networks:
+      - ml_network
 
   grafana:
     image: grafana/grafana:latest
@@ -38,3 +42,9 @@ services:
     depends_on:
       - prometheus
     restart: always
+    networks:
+      - ml_network
+
+networks:
+  ml_network:
+    driver: bridge
