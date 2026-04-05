@@ -7,7 +7,6 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
   test:
     name: Kiểm thử hệ thống
     runs-on: self-hosted
@@ -16,27 +15,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cài đặt thư viện và Mock Data
-        # Dùng continue-on-error để dù lỗi vẫn chạy tiếp build/deploy
         continue-on-error: true
+        shell: powershell # Ép chạy bằng powershell
         run: |
-          # Giả sử máy bạn đã có python3 và pip
           pip install pytest httpx scikit-learn joblib shap --user
-          mkdir -p models
-          python3 -c "
-          import joblib, sklearn.ensemble, shap, sklearn.preprocessing;
-          model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]);
-          joblib.dump(model, 'models/best_model.pkl');
-          explainer = shap.TreeExplainer(model);
-          joblib.dump(explainer, 'models/shap_explainer.pkl');
-          joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl');
-          joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');
-          "
+          if (!(Test-Path "models")) { New-Item -ItemType Directory -Path "models" }
+          python -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
 
       - name: Chạy Pytest
         continue-on-error: true
-        run: python3 -m pytest tests/test_api_pytest.py -v
+        shell: powershell
+        run: python -m pytest tests/test_api_pytest.py -v
 
-  # GIAI ĐOẠN 2 & 3: BUILD & DEPLOY (Gộp lại cho nhanh vì cùng 1 máy)
   deploy:
     name: Đóng gói và Triển khai Local
     runs-on: self-hosted
@@ -48,23 +38,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Xây dựng Docker Image
+        shell: powershell
         run: docker build -t churn-prediction-app:latest .
 
       - name: Restart Container
+        shell: powershell
         run: |
-          # Dừng container cũ nếu có
-          docker stop churn-container || true
-          docker rm churn-container || true
+          # PowerShell không dùng || true, ta dùng try/catch hoặc ErrorAction
+          $containerExists = docker ps -a -q -f name=churn-container
+          if ($containerExists) {
+              docker stop churn-container
+              docker rm churn-container
+          }
           
-          # Chạy container mới trên port 8000
-          docker run -d \
-            --name churn-container \
-            -p 8000:8000 \
-            --restart unless-stopped \
-            churn-prediction-app:latest
+          # Viết liền một dòng hoặc dùng dấu ` của PowerShell để xuống dòng
+          docker run -d --name churn-container -p 8000:8000 --restart unless-stopped churn-prediction-app:latest
 
       - name: Kiểm tra trạng thái
+        shell: powershell
         run: |
-          sleep 5
-          docker ps | grep churn-container
-          echo "Ứng dụng đã sẵn sàng tại http://localhost:8000"
+          Start-Sleep -Seconds 5
+          docker ps | Select-String "churn-container"
+          Write-Host "Ứng dụng đã sẵn sàng tại http://localhost:8000"
