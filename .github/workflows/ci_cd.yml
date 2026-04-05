@@ -1,4 +1,4 @@
-name: ML System GitHub-Hosted CI/CD
+name: ML System Local Self-Hosted CI/CD
 
 on:
   push:
@@ -10,26 +10,17 @@ jobs:
   # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
   test:
     name: Kiểm thử hệ thống
-    runs-on: ubuntu-latest
-    
+    runs-on: self-hosted
     steps:
       - name: Lấy mã nguồn mới nhất
         uses: actions/checkout@v4
 
-      - name: Cài đặt Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          cache: 'pip'
-
-      - name: Cài đặt thư viện và Khởi tạo Mock Data
-        # Cho phép tiếp tục nếu việc cài đặt hoặc tạo data lỗi
+      - name: Cài đặt thư viện và Mock Data
+        # Dùng continue-on-error để dù lỗi vẫn chạy tiếp build/deploy
         continue-on-error: true
         run: |
-          pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest httpx scikit-learn joblib shap
-          
+          # Giả sử máy bạn đã có python3 và pip
+          pip install pytest httpx scikit-learn joblib shap --user
           mkdir -p models
           python3 -c "
           import joblib, sklearn.ensemble, shap, sklearn.preprocessing;
@@ -42,24 +33,38 @@ jobs:
           "
 
       - name: Chạy Pytest
-        # QUAN TRỌNG: Dù test fail thì vẫn đánh dấu step này hoàn thành để chạy tiếp
         continue-on-error: true
         run: python3 -m pytest tests/test_api_pytest.py -v
 
-  # GIAI ĐOẠN 2: BUILD DOCKER 
-  build:
-    name: Đóng gói Docker Image
-    runs-on: ubuntu-latest
+  # GIAI ĐOẠN 2 & 3: BUILD & DEPLOY (Gộp lại cho nhanh vì cùng 1 máy)
+  deploy:
+    name: Đóng gói và Triển khai Local
+    runs-on: self-hosted
     needs: test
-    # QUAN TRỌNG: always() cho phép job này chạy bất kể job 'test' thành công hay thất bại
     if: always() && github.ref == 'refs/heads/main'
-
+    
     steps:
       - name: Lấy mã nguồn mới nhất
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Xây dựng Docker Image
+        run: docker build -t churn-prediction-app:latest .
 
-      - name: Build Docker Image
-        run: docker build -t churn-prediction-app:${{ github.sha }} .
+      - name: Restart Container
+        run: |
+          # Dừng container cũ nếu có
+          docker stop churn-container || true
+          docker rm churn-container || true
+          
+          # Chạy container mới trên port 8000
+          docker run -d \
+            --name churn-container \
+            -p 8000:8000 \
+            --restart unless-stopped \
+            churn-prediction-app:latest
+
+      - name: Kiểm tra trạng thái
+        run: |
+          sleep 5
+          docker ps | grep churn-container
+          echo "Ứng dụng đã sẵn sàng tại http://localhost:8000"
