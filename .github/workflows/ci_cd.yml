@@ -7,6 +7,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
+  # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
   test:
     name: Kiểm thử hệ thống
     runs-on: self-hosted
@@ -16,10 +17,16 @@ jobs:
 
       - name: Cài đặt thư viện và Mock Data
         continue-on-error: true
-        shell: powershell # Ép chạy bằng powershell
+        shell: powershell
         run: |
+          # Nâng cấp pip và cài đặt thư viện cần thiết
+          python -m pip install --upgrade pip
           pip install pytest httpx scikit-learn joblib shap --user
+          
+          # Tạo thư mục models nếu chưa có
           if (!(Test-Path "models")) { New-Item -ItemType Directory -Path "models" }
+          
+          # Sinh Mock Data để bypass nếu chưa có model thật
           python -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
 
       - name: Chạy Pytest
@@ -27,6 +34,7 @@ jobs:
         shell: powershell
         run: python -m pytest tests/test_api_pytest.py -v
 
+  # GIAI ĐOẠN 2: BUILD & DEPLOY
   deploy:
     name: Đóng gói và Triển khai Local
     runs-on: self-hosted
@@ -41,22 +49,41 @@ jobs:
         shell: powershell
         run: docker build -t churn-prediction-app:latest .
 
-      - name: Restart Container
+      - name: Restart Container (Xử lý chiếm dụng Port 8000)
         shell: powershell
         run: |
-          # PowerShell không dùng || true, ta dùng try/catch hoặc ErrorAction
-          $containerExists = docker ps -a -q -f name=churn-container
-          if ($containerExists) {
-              docker stop churn-container
-              docker rm churn-container
+          Write-Host "Checking for existing containers on port 8000..."
+          
+          # 1. Tìm tất cả container (bất kể tên gì) đang chiếm dụng port 8000
+          $busyContainers = docker ps -q --filter "publish=8000"
+          if ($busyContainers) {
+              Write-Host "Stopping and removing containers using port 8000..."
+              docker stop $busyContainers
+              docker rm $busyContainers
+          }
+
+          # 2. Xóa đích danh container 'churn-container' nếu nó vẫn còn tồn tại (ở trạng thái stop)
+          $namedContainer = docker ps -a -q -f name=churn-container
+          if ($namedContainer) {
+              Write-Host "Removing old churn-container..."
+              docker rm -f churn-container
           }
           
-          # Viết liền một dòng hoặc dùng dấu ` của PowerShell để xuống dòng
+          # 3. Chạy container mới
+          Write-Host "Starting new container on port 8000..."
           docker run -d --name churn-container -p 8000:8000 --restart unless-stopped churn-prediction-app:latest
 
       - name: Kiểm tra trạng thái
         shell: powershell
         run: |
           Start-Sleep -Seconds 5
-          docker ps | Select-String "churn-container"
-          Write-Host "Ứng dụng đã sẵn sàng tại http://localhost:8000"
+          $status = docker ps | Select-String "churn-container"
+          if ($status) {
+              Write-Host "------------------------------------------------"
+              Write-Host "DEPLOY SUCCESSFUL!"
+              Write-Host "App is running at: http://localhost:8000"
+              Write-Host "------------------------------------------------"
+          } else {
+              Write-Host "Deployment failed: Container is not running."
+              exit 1
+          }
