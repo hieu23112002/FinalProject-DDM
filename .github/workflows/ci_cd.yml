@@ -43,7 +43,6 @@ jobs:
     needs: test
     if: always() && github.ref == 'refs/heads/main'
     
-    
     steps:
       - name: Lấy mã nguồn mới nhất
         uses: actions/checkout@v4
