@@ -131,7 +131,12 @@ class ChurnPreprocessor:
             if column not in transformed_df.columns:
                 transformed_df[column] = 0
 
-        return transformed_df[self.feature_columns_]
+        transformed_df = transformed_df[self.feature_columns_].copy()
+        for column in transformed_df.columns:
+            if not pd.api.types.is_numeric_dtype(transformed_df[column]):
+                transformed_df[column] = pd.to_numeric(transformed_df[column], errors="coerce").fillna(0)
+
+        return transformed_df
 
     def save(self, path: str | Path) -> None:
         joblib.dump(self, path)
