@@ -2,71 +2,101 @@ name: ML System Local Self-Hosted CI/CD
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
 
 jobs:
-  # GIAI ĐOẠN 1: KIỂM THỬ (TEST)
   test:
-    name: Kiểm thử hệ thống
-    runs-on: self-hosted
+    name: Test API
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Lấy mã nguồn mới nhất
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cài đặt thư viện và Mock Data
-        continue-on-error: true
-        shell: powershell
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
         run: |
-          # Đồng bộ phiên bản scikit-learn để tránh lỗi InconsistentVersionWarning
           python -m pip install --upgrade pip
-          pip install pytest httpx scikit-learn==1.0.0 joblib shap --user
-          
-          if (!(Test-Path "models")) { New-Item -ItemType Directory -Path "models" }
-          
-          # Sinh lại Mock Data bằng phiên bản thư viện hiện tại
-          py -c "import joblib, sklearn.ensemble, shap, sklearn.preprocessing; model = sklearn.ensemble.RandomForestClassifier().fit([[0]*21], [0]); joblib.dump(model, 'models/best_model.pkl'); explainer = shap.TreeExplainer(model); joblib.dump(explainer, 'models/shap_explainer.pkl'); joblib.dump(['feature_'+str(i) for i in range(21)], 'models/feature_names.pkl'); joblib.dump({'gender': sklearn.preprocessing.LabelEncoder().fit(['a', 'b'])}, 'models/label_encoders.pkl');"
+          pip install -r requirements.txt
 
-      - name: Chạy Pytest
-        continue-on-error: true
-        shell: powershell
-        run: py -m pytest tests/test_api_pytest.py -v
+      - name: Ensure preprocessor artifact exists
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+          import joblib
 
-  # GIAI ĐOẠN 2: BUILD & DEPLOY TOÀN BỘ STACK
+          root = Path.cwd()
+          sys.path.insert(0, str(root / 'src'))
+          from preprocessing import ChurnPreprocessor
+
+          models_dir = root / 'models'
+          models_dir.mkdir(exist_ok=True)
+          preprocessor_path = models_dir / 'preprocessor.pkl'
+          if not preprocessor_path.exists():
+              feature_names = joblib.load(models_dir / 'feature_names.pkl')
+              legacy_path = root / 'data' / 'processed' / 'label_encoders.pkl'
+              preprocessor = ChurnPreprocessor.from_legacy_artifacts(feature_names, legacy_path)
+              preprocessor.save(preprocessor_path)
+          PY
+
+      - name: Run pytest
+        run: python -m pytest tests/test_api_pytest.py -v
+
   deploy:
-    name: Đóng gói và Triển khai Local
+    name: Deploy Local Stack
     runs-on: self-hosted
     needs: test
-    if: always() && github.ref == 'refs/heads/main'
-    
+    if: github.ref == 'refs/heads/main' && needs.test.result == 'success'
+
     steps:
-      - name: Lấy mã nguồn mới nhất
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy toàn bộ Stack bằng Docker Compose
-        shell: powershell
-        run: |
-          # --remove-orphans giúp dọn dẹp các container rác cũ
-          docker compose up -d --build --remove-orphans
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
 
-      - name: Kiểm tra trạng thái hệ thống
+      - name: Verify Docker daemon
         shell: powershell
         run: |
-          Start-Sleep -Seconds 15
-          Write-Host "--- Danh sách các container đang chạy ---"
+          docker version
+          docker info
+
+      - name: Ensure preprocessor artifact exists
+        shell: powershell
+        run: |
+          python -c "from pathlib import Path; import sys, joblib; root = Path.cwd(); sys.path.insert(0, str(root / 'src')); from preprocessing import ChurnPreprocessor; models_dir = root / 'models'; models_dir.mkdir(exist_ok=True); preprocessor_path = models_dir / 'preprocessor.pkl'; legacy_path = root / 'data' / 'processed' / 'label_encoders.pkl'; feature_names = joblib.load(models_dir / 'feature_names.pkl'); preprocessor = ChurnPreprocessor.from_legacy_artifacts(feature_names, legacy_path) if not preprocessor_path.exists() else None; preprocessor.save(preprocessor_path) if preprocessor else None"
+
+      - name: Validate docker compose configuration
+        shell: powershell
+        run: docker compose config
+
+      - name: Deploy full stack with Docker Compose
+        shell: powershell
+        run: docker compose up -d --build --remove-orphans
+
+      - name: Check deployment status
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 20
           docker compose ps
-          
-          # Kiểm tra container API chính
           $api_status = docker ps --filter "name=churn_api_service" --filter "status=running" -q
-          if ($api_status) {
-              Write-Host "------------------------------------------------"
-              Write-Host "DEPLOY SUCCESSFUL!"
-              Write-Host "App: http://localhost:8000"
-              Write-Host "Grafana: http://localhost:3000"
-              Write-Host "Prometheus: http://localhost:9090"
-              Write-Host "------------------------------------------------"
-          } else {
-              Write-Host "DEPLOY FAILED: churn_api_service is not running!"
+          if (-not $api_status) {
+              Write-Host "DEPLOY FAILED: churn_api_service is not running"
+              docker compose logs churn-api
               exit 1
           }
+          Write-Host "Deployment successful"
+          Write-Host "App: http://localhost:8000"
+          Write-Host "Grafana: http://localhost:3000"
+          Write-Host "Prometheus: http://localhost:9090"

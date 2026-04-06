@@ -1,11 +1,22 @@
-
 venv/
 .venv/
-pycache/
-data/raw/*
-data/processed/*
+__pycache__/
+*.py[cod]
+.pytest_cache/
 mlruns/
-models/.pkl
-models/.joblib
 .DS_Store
 Thumbs.db
+
+# Local runner and temp output
+actions-runner/
+
+# Data artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Model artifacts
+models/*.pkl
+models/*.joblib
+!models/.gitkeep
