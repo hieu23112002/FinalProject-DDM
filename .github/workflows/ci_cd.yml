@@ -26,27 +26,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Ensure preprocessor artifact exists
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import sys
-          import joblib
-
-          root = Path.cwd()
-          sys.path.insert(0, str(root / 'src'))
-          from preprocessing import ChurnPreprocessor
-
-          models_dir = root / 'models'
-          models_dir.mkdir(exist_ok=True)
-          preprocessor_path = models_dir / 'preprocessor.pkl'
-          if not preprocessor_path.exists():
-              feature_names = joblib.load(models_dir / 'feature_names.pkl')
-              legacy_path = root / 'data' / 'processed' / 'label_encoders.pkl'
-              preprocessor = ChurnPreprocessor.from_legacy_artifacts(feature_names, legacy_path)
-              preprocessor.save(preprocessor_path)
-          PY
-
       - name: Run pytest
         run: python -m pytest tests/test_api_pytest.py -v
 
@@ -71,11 +50,6 @@ jobs:
         run: |
           docker version
           docker info
-
-      - name: Ensure preprocessor artifact exists
-        shell: powershell
-        run: |
-          python -c "from pathlib import Path; import sys, joblib; root = Path.cwd(); sys.path.insert(0, str(root / 'src')); from preprocessing import ChurnPreprocessor; models_dir = root / 'models'; models_dir.mkdir(exist_ok=True); preprocessor_path = models_dir / 'preprocessor.pkl'; legacy_path = root / 'data' / 'processed' / 'label_encoders.pkl'; feature_names = joblib.load(models_dir / 'feature_names.pkl'); preprocessor = ChurnPreprocessor.from_legacy_artifacts(feature_names, legacy_path) if not preprocessor_path.exists() else None; preprocessor.save(preprocessor_path) if preprocessor else None"
 
       - name: Validate docker compose configuration
         shell: powershell

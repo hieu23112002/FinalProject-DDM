@@ -144,6 +144,13 @@ class ChurnPreprocessor:
         return artifact
 
     @classmethod
+    def from_feature_names(cls, feature_names: list[str]) -> ChurnPreprocessor:
+        instance = cls()
+        instance.feature_columns_ = feature_names
+        instance.target_column_ = "Churn"
+        return instance
+
+    @classmethod
     def from_legacy_artifacts(
         cls,
         feature_names: list[str],

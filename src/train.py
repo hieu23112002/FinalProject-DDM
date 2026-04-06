@@ -39,7 +39,7 @@ class ChurnModelTrainer:
             return ChurnPreprocessor.load(PREPROCESSOR_ARTIFACT_PATH)
         if LEGACY_ENCODERS_PATH.exists():
             return ChurnPreprocessor.from_legacy_artifacts(feature_names, LEGACY_ENCODERS_PATH)
-        raise FileNotFoundError("No preprocessor artifact found. Run preprocessing first.")
+        return ChurnPreprocessor.from_feature_names(feature_names)
 
     def train_model(self, X_train: pd.DataFrame, y_train: pd.Series) -> lgb.LGBMClassifier:
         with mlflow.start_run(run_name="LGBM_Production_Final"):

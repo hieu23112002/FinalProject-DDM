@@ -83,7 +83,7 @@ def _load_preprocessor(feature_names: list[str]) -> ChurnPreprocessor:
     if legacy_encoders_path.exists():
         return ChurnPreprocessor.from_legacy_artifacts(feature_names, legacy_encoders_path)
 
-    raise FileNotFoundError("Missing preprocessor artifact.")
+    return ChurnPreprocessor.from_feature_names(feature_names)
 
 
 def load_model_artifacts() -> bool:
