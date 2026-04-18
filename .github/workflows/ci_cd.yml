@@ -119,6 +119,16 @@ jobs:
             docker rm -f $name 2>$null | Out-Null
           }
 
+      - name: Start MLflow for training
+        shell: powershell
+        run: docker compose up -d --build mlflow
+
+      - name: Training model (pre-deploy)
+        shell: powershell
+        run: |
+          docker compose run --rm churn-api python src/preprocessing.py
+          docker compose run --rm churn-api python src/train.py
+
       - name: Deploy full stack with Docker Compose
         shell: powershell
         run: docker compose up -d --build --remove-orphans
@@ -135,12 +145,6 @@ jobs:
               exit 1
           }
           Write-Host "Deployment successful"
-          Write-Host "App: http://localhost:8000"
-          Write-Host "Grafana: http://localhost:3000"
+          Write-Host "App: http://localhost:8080"
+          Write-Host "Grafana: http://localhost:3101"
           Write-Host "Prometheus: http://localhost:9090"
-
-      - name: Training model
-        shell: powershell
-        run: |
-          docker compose exec -T churn-api python src/preprocessing.py
-          docker compose exec -T churn-api python src/train.py
