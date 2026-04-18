@@ -14,71 +14,12 @@
         "uid": "loki-churn"
       },
       "gridPos": {
-        "h": 3,
+        "h": 24,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
-      "options": {
-        "content": "Use this dashboard to inspect logs from all Docker services. Start with `churn_api_service` and `churn_worker` for troubleshooting.",
-        "mode": "markdown"
-      },
-      "title": "How To Use",
-      "type": "text"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki-churn"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 0,
-        "y": 3
-      },
-      "id": 2,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki-churn"
-          },
-          "expr": "sum(count_over_time({container=~\"$container\"}[$__range]))",
-          "queryType": "instant",
-          "refId": "A"
-        }
-      ],
-      "title": "Log Lines In Time Range",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki-churn"
-      },
-      "gridPos": {
-        "h": 18,
-        "w": 18,
-        "x": 6,
-        "y": 3
-      },
-      "id": 3,
       "options": {
         "showLabels": true,
         "showTime": true,
