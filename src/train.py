@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import logging
+import os
 
 import joblib
 import lightgbm as lgb
@@ -21,12 +22,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = PROJECT_ROOT / "models"
+DEFAULT_MLFLOW_TRACKING_URI = (PROJECT_ROOT / "mlruns").resolve().as_uri()
 
 
 class ChurnModelTrainer:
     """Train and persist the churn classification model."""
 
     def __init__(self, experiment_name: str = "Churn_Prediction_Production") -> None:
+        tracking_uri = os.getenv("MLFLOW_TRACKING_URI", DEFAULT_MLFLOW_TRACKING_URI)
+        mlflow.set_tracking_uri(tracking_uri)
+        logging.info("MLflow tracking URI: %s", tracking_uri)
         mlflow.set_experiment(experiment_name)
 
     def load_training_data(self) -> tuple[pd.DataFrame, pd.Series]:

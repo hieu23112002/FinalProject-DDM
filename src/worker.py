@@ -1,6 +1,6 @@
 import os
 from celery import Celery
-from database import SessionLocal, PredictionLog
+from src.database import SessionLocal, PredictionLog
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
