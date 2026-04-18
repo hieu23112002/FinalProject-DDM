@@ -11,16 +11,16 @@
       "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
       "id": 100,
       "options": {
-        "content": "**Đọc nhanh:** Mỗi lần bạn gọi `POST /predict`, counter `churn_api_predictions_total` tăng 1. Biểu đồ latency là thời gian xử lý một request (giây). Nếu không thấy đường line: gọi `/predict` vài lần, đợi ~15s (Prometheus scrape), chọn time range **Last 15 minutes**.",
+        "content": " Mỗi lần bạn gọi `POST /predict`, counter `churn_api_predictions_total` tăng 1. Biểu đồ latency là thời gian xử lý một request (giây). Nếu không thấy đường line: gọi `/predict` vài lần, đợi ~15s (Prometheus scrape), chọn time range **Last 15 minutes**.",
         "mode": "markdown"
       },
-      "title": "Hướng dẫn (đọc panel này trước)",
+      "title": "Dashboard Churn API",
       "transparent": true,
       "type": "text"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
-      "description": "Tổng số request đến endpoint dự đoán từ lúc API khởi động (không giảm).",
+      "description": "Tổng số request đến endpoint dự đoán từ lúc API khởi động.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -97,7 +97,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus-churn" },
-      "description": "Trung bình thời gian xử lý một request /predict (giây). Càng thấp càng nhanh.",
+      "description": "Trung bình thời gian xử lý một request /predict (giây).",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -170,7 +170,7 @@
   "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Churn API — Giám sát (dễ hiểu)",
-  "uid": "churn-api-de-hieu",
+  "title": "Churn API — Giám sát ",
+  "uid": "churn-api",
   "version": 1
 }
