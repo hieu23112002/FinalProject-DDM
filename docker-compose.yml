@@ -54,7 +54,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - .:/app
+      - mlflow_data:/mlflow
     command:
       - "python"
       - "-m"
@@ -62,8 +62,9 @@ services:
       - "server"
       - "--host=0.0.0.0"
       - "--port=5000"
-      - "--backend-store-uri=file:///app/mlruns"
-      - "--default-artifact-root=/app/mlruns"
+      - "--allowed-hosts=*"
+      - "--backend-store-uri=file:///mlflow/mlruns"
+      - "--default-artifact-root=/mlflow/mlruns"
     restart: unless-stopped
     networks:
       - ml_network
@@ -191,3 +192,4 @@ networks:
 
 volumes:
   postgres_data:
+  mlflow_data:
