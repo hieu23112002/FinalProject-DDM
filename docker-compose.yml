@@ -141,7 +141,9 @@ services:
       - "3100:3100"
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-    command: -config.file=/etc/loki/local-config.yaml
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -validation.allow-structured-metadata=false
     networks:
       - ml_network
     restart: unless-stopped
