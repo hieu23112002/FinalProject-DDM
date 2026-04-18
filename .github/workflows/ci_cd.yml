@@ -138,3 +138,9 @@ jobs:
           Write-Host "App: http://localhost:8000"
           Write-Host "Grafana: http://localhost:3000"
           Write-Host "Prometheus: http://localhost:9090"
+
+      - name: Training model
+        shell: powershell
+        run: |
+          docker compose exec -T churn-api python src/preprocessing.py
+          docker compose exec -T churn-api python src/train.py
