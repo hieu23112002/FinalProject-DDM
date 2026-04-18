@@ -9,6 +9,7 @@ import lightgbm as lgb
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 
 from preprocessing import (
     LEGACY_ENCODERS_PATH,
@@ -34,10 +35,12 @@ class ChurnModelTrainer:
         logging.info("MLflow tracking URI: %s", tracking_uri)
         mlflow.set_experiment(experiment_name)
 
-    def load_training_data(self) -> tuple[pd.DataFrame, pd.Series]:
+    def load_training_data(self) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
         X_train = pd.read_csv(PROCESSED_DIR / "X_train.csv")
         y_train = pd.read_csv(PROCESSED_DIR / "y_train.csv").iloc[:, 0]
-        return X_train, y_train
+        X_test = pd.read_csv(PROCESSED_DIR / "X_test.csv")
+        y_test = pd.read_csv(PROCESSED_DIR / "y_test.csv").iloc[:, 0]
+        return X_train, y_train, X_test, y_test
 
     def load_preprocessor(self, feature_names: list[str]) -> ChurnPreprocessor:
         if PREPROCESSOR_ARTIFACT_PATH.exists():
@@ -46,7 +49,13 @@ class ChurnModelTrainer:
             return ChurnPreprocessor.from_legacy_artifacts(feature_names, LEGACY_ENCODERS_PATH)
         return ChurnPreprocessor.from_feature_names(feature_names)
 
-    def train_model(self, X_train: pd.DataFrame, y_train: pd.Series) -> lgb.LGBMClassifier:
+    def train_model(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+    ) -> lgb.LGBMClassifier:
         with mlflow.start_run(run_name="LGBM_Production_Final"):
             model_parameters = {
                 "n_estimators": 200,
@@ -59,6 +68,16 @@ class ChurnModelTrainer:
             classifier.fit(X_train, y_train)
 
             mlflow.log_params(model_parameters)
+            y_pred = classifier.predict(X_test)
+            y_prob = classifier.predict_proba(X_test)[:, 1]
+            evaluation_metrics = {
+                "accuracy": float(accuracy_score(y_test, y_pred)),
+                "precision": float(precision_score(y_test, y_pred, zero_division=0)),
+                "recall": float(recall_score(y_test, y_pred, zero_division=0)),
+                "f1_score": float(f1_score(y_test, y_pred, zero_division=0)),
+                "roc_auc": float(roc_auc_score(y_test, y_prob)),
+            }
+            mlflow.log_metrics(evaluation_metrics)
             mlflow.sklearn.log_model(classifier, "model")
 
             MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -77,8 +96,8 @@ class ChurnModelTrainer:
 if __name__ == "__main__":
     trainer = ChurnModelTrainer()
     try:
-        X_train_data, y_train_data = trainer.load_training_data()
-        trainer.train_model(X_train_data, y_train_data)
+        X_train_data, y_train_data, X_test_data, y_test_data = trainer.load_training_data()
+        trainer.train_model(X_train_data, y_train_data, X_test_data, y_test_data)
         logging.info("Model training pipeline finished.")
     except Exception as error:
         logging.error("Training failed: %s", error)
