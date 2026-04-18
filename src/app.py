@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import logging
+import os
 
 import joblib
 import pandas as pd
@@ -216,4 +217,6 @@ def predict_customer_churn(request_data: CustomerInferenceRequest) -> dict[str, 
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn_host = os.getenv("UVICORN_HOST", "127.0.0.1")
+    uvicorn_port = int(os.getenv("UVICORN_PORT", "8000"))
+    uvicorn.run(app, host=uvicorn_host, port=uvicorn_port)
