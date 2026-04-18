@@ -174,7 +174,7 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  <p className="text-gray-300 text-lg italic">"{result.recommendation}"</p>
+                  <p className="text-gray-300 text-lg italic">&ldquo;{result.recommendation}&rdquo;</p>
                 </div>
 
                 {/* Risk Factors */}

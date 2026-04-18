@@ -14,8 +14,9 @@ export function usePredictChurn() {
       const res = await predictChurn(data);
       setResult(res);
       return res;
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
       return null;
     } finally {
       setLoading(false);
