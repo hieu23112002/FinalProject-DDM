@@ -77,6 +77,14 @@ jobs:
     if: github.ref == 'refs/heads/main' && needs.test.result == 'success'
 
     steps:
+      - name: Prepare git safe directory (self-hosted Windows)
+        shell: powershell
+        run: |
+          $workspace = $env:GITHUB_WORKSPACE
+          $workspaceForward = $workspace -replace '\\', '/'
+          git config --global --add safe.directory "$workspace"
+          git config --global --add safe.directory "$workspaceForward"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
