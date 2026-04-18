@@ -2,27 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 import logging
-import sys
 
 import joblib
 import pandas as pd
 import shap
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field
 
+from database import init_db
+from preprocessing import ChurnPreprocessor
 
 CURRENT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = CURRENT_DIR.parent
 MODELS_DIR = PROJECT_ROOT / "models"
-SRC_DIR = str(CURRENT_DIR)
-if SRC_DIR not in sys.path:
-    sys.path.append(SRC_DIR)
-
-from preprocessing import ChurnPreprocessor
-from database import init_db, SessionLocal, PredictionLog
 
 # Initialize database tables
 try:
@@ -65,9 +61,6 @@ class CustomerInferenceRequest(BaseModel):
     PaymentMethod: str = Field(..., json_schema_extra={"example": "Electronic check"})
     MonthlyCharges: float = Field(..., json_schema_extra={"example": 70.35})
     TotalCharges: str = Field(..., json_schema_extra={"example": "844.2"})
-
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Churn Prediction Production API",
