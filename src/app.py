@@ -72,6 +72,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(
     title="Churn Prediction Production API",
     description="Production churn prediction API with SHAP explanations and Prometheus metrics.",
+    root_path="/api"
 )
 
 app.add_middleware(

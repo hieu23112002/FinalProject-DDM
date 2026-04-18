@@ -49,7 +49,12 @@ After startup, the system is reachable at:
 | :--- | :--- | :--- |
 | **User Dashboard** | [http://localhost](http://localhost) | Main App UI |
 | **API Docs** | [http://localhost/api/docs](http://localhost/api/docs) | Interactive API Spec |
-| **Grafana** | [http://localhost:3000](http://localhost:3000) | Observability Dashboard |
+admin
+admin
+| **Grafana** | [http://localhost:3000](http://localhost:3000) | Observability 
+Dashboard |
+Email: admin@admin.com
+Password: admin
 | **pgAdmin** | [http://localhost:5050](http://localhost:5050) | Database Explorer |
 | **Prometheus** | [http://localhost:9090](http://localhost:9090) | Metric Storage |
 

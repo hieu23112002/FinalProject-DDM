@@ -2,8 +2,10 @@ services:
   frontend:
     build: ./frontend
     container_name: churn_frontend
-    ports:
-      - "3000:3000"
+    # Removed direct port mapping to resolve conflict with Grafana. 
+    # Frontend is accessible via Nginx on port 80.
+    # ports:
+    #   - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=/api
     depends_on:
@@ -65,7 +67,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana_service
     ports:
-      - "3000:3000"
+      - "3101:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
@@ -141,13 +143,14 @@ services:
   worker:
     build: .
     container_name: churn_worker
-    command: celery -A worker worker --loglevel=info
+    command: celery -A src.worker worker --loglevel=info
     depends_on:
       - redis
       - db
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/churn_db
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=.
     volumes:
       - .:/app
     networks:
