@@ -1,41 +1,55 @@
-Tài liệu Kiến trúc Hệ thống (System Architecture)
+# System Architecture - Enterprise Churn Prediction
 
-1. Tổng quan (High-level Architecture)
+## 1. High-Level Architecture
+The system follows a modern **Microservices** and **Event-Driven** pattern, containerized using Docker and orchestrated via Docker Compose.
 
-Hệ thống được thiết kế theo kiến trúc Microservices đóng gói bằng Docker. Luồng dữ liệu chính đi từ yêu cầu của người dùng qua API đến mô hình học máy và trả về kết quả kèm giải thích.
+```mermaid
+graph TD
+    User([User]) --> Nginx[Nginx API Gateway]
+    Nginx --> Frontend[Next.js Dashboard]
+    Nginx --> API[FastAPI Serving]
+    API --> Model[(LightGBM Model)]
+    API --> Redis[Redis Broker]
+    Redis --> Worker[Celery Worker]
+    Worker --> DB[(PostgreSQL)]
+    API -.-> Prometheus[Prometheus]
+    Promtail[Promtail] --> Loki[Loki]
+    Loki --> Grafana[Grafana]
+    Prometheus --> Grafana
+```
 
-2. Thành phần hệ thống
+## 2. Core Components
 
-Data Pipeline: Xử lý dữ liệu thô từ CSV, thực hiện Feature Engineering và chia tập Train/Test.
+### API Gateway (Nginx)
+The single entry point for the system. It handles reverse proxying, SSL termination (optional), and routing:
+- `/` -> Served by the Frontend service.
+- `/api/` -> Routed to the FastAPI backend.
 
-ML Engine (LightGBM): Mô hình dự báo được tối ưu hóa cho dữ liệu mất cân bằng.
+### ML Serving (FastAPI)
+A high-performance Python API that handles:
+- Real-time feature engineering.
+- Rapid model inference.
+- Triggering asynchronous background tasks.
 
-Responsible AI (SHAP): Giải thích các quyết định của mô hình cho từng khách hàng cụ thể.
+### Distributed Task Queue (Celery & Redis)
+To avoid blocking the main API thread, heavy operations are offloaded:
+- **SHAP Explanation**: Complex SHAP calculations can be performed by workers.
+- **Persistence logging**: Every prediction is logged to the DB asynchronously to ensure sub-200ms API response times.
 
-FastAPI Server: Cung cấp các endpoint RESTful để phục vụ dự đoán thời gian thực.
+### Persistence Layer (PostgreSQL)
+A relational database used to store:
+- **Inference Logs**: Customer inputs, probabilities, and risk factors.
+- **Audit Trails**: For regulatory or business review.
 
-Monitoring Stack: Prometheus thu thập các chỉ số hệ thống và chỉ số ML (tỷ lệ Churn, độ trễ).
+### Observability Stack (Loki, Prometheus, Grafana)
+- **Prometheus**: Collects ML-specific metrics (churn rate, latency, model drift).
+- **Loki**: Aggregates logs from all containers (API, Frontend, Nginx, DB).
+- **Grafana**: A unified dashboard providing 360-degree visibility.
 
-3. Luồng dữ liệu (Data Flow)
-
-User gửi JSON qua POST /predict.
-
-FastAPI gọi ChurnPreprocessor để làm sạch và tạo đặc trưng.
-
-Mô hình best_model.pkl dự báo xác suất.
-
-SHAP Explainer tính toán mức độ ảnh hưởng của các đặc trưng.
-
-API trả về kết quả dự báo kèm top_reasons.
-
-4. Công nghệ sử dụng (Tech Stack)
-
-Ngôn ngữ: Python 3.12
-
-Framework: FastAPI, Scikit-learn, LightGBM
-
-Theo dõi: MLflow, Prometheus
-
-Đóng gói: Docker, Docker Compose
-
-CI/CD: GitHub Actions
+## 3. Data Flow
+1. User interacts with the **Next.js Dashboard**.
+2. Request is routed through **Nginx** to the **FastAPI** `/predict` endpoint.
+3. FastAPI performs **Feature Engineering** on-the-fly.
+4. **LightGBM** model returns a churn probability.
+5. FastAPI triggers a **Celery Task** to save the prediction to **Postgres** and returns the result to the user.
+6. **Prometheus** scrapes the metric endpoint to update churn trends in real-time.

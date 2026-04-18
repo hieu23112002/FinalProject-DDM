@@ -10,7 +10,16 @@ joblib
 fastapi
 uvicorn
 pydantic
+# Database
+sqlalchemy
+psycopg2-binary
+alembic
+# Async Tasks
+celery
+redis
 pytest
 httpx
+ruff
+bandit
 shap
 prometheus_client

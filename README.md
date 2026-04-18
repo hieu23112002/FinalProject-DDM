@@ -1,71 +1,74 @@
-# Customer Churn Prediction System
+# Enterprise Churn Prediction System
 
-Customer churn prediction system with a FastAPI service, preprocessing/training pipeline, and monitoring via Prometheus and Grafana.
+An end-to-end, production-ready Customer Churn Prediction system featuring a high-performance ML pipeline, a modern Next.js dashboard, and a robust observability stack.
 
-## Main Structure
+## 🚀 Key Features
 
-- `src/data_ingestion.py`: download and load the raw dataset
-- `src/preprocessing.py`: data cleaning, feature engineering, and preprocessor artifact handling
-- `src/train.py`: LightGBM training and model artifact export
-- `src/app.py`: prediction API and Prometheus metrics endpoint
-- `tests/test_api_pytest.py`: automated API tests
-- `monitoring/`: Prometheus and Grafana configuration
+- **Scalable Architecture**: Microservices orchestrated via Docker Compose.
+- **Enterprise Serving**: Unified API Gateway using Nginx.
+- **Modern UI**: Next.js 14 Dashboard with real-time SHAP analysis.
+- **Persistence Layer**: PostgreSQL for robust inference logging and auditing.
+- **Async Processing**: Celery & Redis for offloading heavy ML background tasks.
+- **Full Observability**: Metrics (Prometheus), Logging (Loki), and Visualization (Grafana).
 
-## Run With Python
+## 📂 Project Structure
 
-Requirement: Python 3.12
+- `frontend/`: Next.js 14 Web Application (Port 80/3000)
+- `src/`: Backend Core (FastAPI, ML Engine, Database logic)
+- `nginx/`: API Gateway & Reverse Proxy configuration
+- `monitoring/`: Full Grafana/Loki/Prometheus stack
+- `models/`: Trained model binaries and preprocessors
+- `data/`: Dataset storage and raw files
 
+## 🛠️ Tech Stack
+
+- **ML**: LightGBM, Scikit-learn, SHAP, MLflow
+- **Backend**: FastAPI, SQLAlchemy, Celery, Redis
+- **Frontend**: Next.js 14, Tailwind CSS, TypeScript
+- **Infrastructure**: Docker, Nginx, PostgreSQL
+- **DevOps**: GitHub Actions (CI/CD with Quality Gates)
+
+## 🚦 Getting Started
+
+### Prerequisites
+- Docker & Docker Compose
+- Node.js (for local frontend dev)
+- Python 3.12 (for local backend dev)
+
+### The Fast Way (Docker Compose)
+The easiest way to run the entire stack is using Docker Compose:
+
+```powershell
+docker compose up -d --build
+```
+
+### Accessing Services
+After startup, the system is reachable at:
+
+| Service | URL | Description |
+| :--- | :--- | :--- |
+| **User Dashboard** | [http://localhost](http://localhost) | Main App UI |
+| **API Docs** | [http://localhost/api/docs](http://localhost/api/docs) | Interactive API Spec |
+| **Grafana** | [http://localhost:3000](http://localhost:3000) | Observability Dashboard |
+| **pgAdmin** | [http://localhost:5050](http://localhost:5050) | Database Explorer |
+| **Prometheus** | [http://localhost:9090](http://localhost:9090) | Metric Storage |
+
+## 🧪 Development & Testing
+
+### Local Python Environment
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Run the pipeline:
-
-```powershell
-python src/preprocessing.py
-python src/train.py
-python src/app.py
-```
-
-Available endpoints after startup:
-
-- Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health: [http://localhost:8000/health](http://localhost:8000/health)
-- Metrics: [http://localhost:8000/metrics](http://localhost:8000/metrics)
-
-## Run Tests
-
+### Running Tests
 ```powershell
 python -m pytest tests/test_api_pytest.py -v
 ```
 
-## Run With Docker Compose
-
-Requirement: Docker Desktop or Docker Engine must be running.
-
-```powershell
-docker compose up -d --build
-```
-
-Services:
-
-- API: [http://localhost:8000](http://localhost:8000)
-- Grafana: [http://localhost:3000](http://localhost:3000)
-- Prometheus: [http://localhost:9090](http://localhost:9090)
-
-Stop the stack:
-
-```powershell
-docker compose down
-```
-
-## CI/CD
-
-The workflow in `.github/workflows/ci_cd.yml` has two jobs:
-
-- `test`: runs on a GitHub-hosted runner, installs dependencies, and executes pytest
-- `deploy`: runs on a self-hosted runner, verifies the Docker daemon, and deploys with `docker compose`
-
-If deploy fails with a Docker daemon connection error, verify that Docker Desktop or Docker Engine is actually running on the self-hosted runner machine.
+## 🔄 CI/CD Pipeline
+The project includes a multi-stage GitHub Actions workflow (`.github/workflows/ci_cd.yml`):
+1. **Linting**: Automated code quality checks for both Python (Ruff/Bandit) and Frontend (ESLint).
+2. **Testing**: Automated regression tests for the API.
+3. **Deployment**: Zero-downtime deployment to the target server via Docker Compose.

@@ -8,3 +8,11 @@ __pycache__/
 mlruns/
 src/__pycache__/
 tests/__pycache__/
+
+# Frontend exclusions
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+node_modules/

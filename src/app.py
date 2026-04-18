@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 import logging
@@ -22,6 +22,13 @@ if SRC_DIR not in sys.path:
     sys.path.append(SRC_DIR)
 
 from preprocessing import ChurnPreprocessor
+from database import init_db, SessionLocal, PredictionLog
+
+# Initialize database tables
+try:
+    init_db()
+except Exception as e:
+    logging.warning(f"Database initialization failed: {e}")
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -60,9 +67,19 @@ class CustomerInferenceRequest(BaseModel):
     TotalCharges: str = Field(..., json_schema_extra={"example": "844.2"})
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Churn Prediction Production API",
     description="Production churn prediction API with SHAP explanations and Prometheus metrics.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 classifier_model = None
@@ -169,7 +186,7 @@ def predict_customer_churn(request_data: CustomerInferenceRequest) -> dict[str, 
             reverse=True,
         )[:3]
 
-        return {
+        response_payload = {
             "prediction_status": prediction_status,
             "probability_percent": round(float(churn_probability) * 100, 2),
             "top_risk_factors": [
@@ -182,6 +199,22 @@ def predict_customer_churn(request_data: CustomerInferenceRequest) -> dict[str, 
                 else "Customer appears stable"
             ),
         }
+
+        # Log to Database (Asynchronously using Celery)
+        try:
+            from worker import log_prediction_to_db
+            task_data = {
+                "prediction_status": prediction_status,
+                "probability": float(churn_probability),
+                "risk_factors": response_payload["top_risk_factors"],
+                "raw_input": request_data.model_dump(),
+                "recommendation": response_payload["recommendation"]
+            }
+            log_prediction_to_db.delay(task_data)
+        except Exception as async_err:
+            logging.error(f"Failed to trigger async logging: {async_err}")
+
+        return response_payload
     except HTTPException:
         raise
     except Exception as error:
