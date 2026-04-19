@@ -94,6 +94,13 @@ jobs:
           docker version
           docker info
 
+      - name: Setup Environment Variables
+        shell: powershell
+        run: |
+          if (-not (Test-Path .env)) {
+            Copy-Item .env.example .env
+          }
+
       - name: Validate docker compose configuration
         shell: powershell
         run: docker compose config

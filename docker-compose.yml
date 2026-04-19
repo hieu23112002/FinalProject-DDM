@@ -7,7 +7,7 @@ services:
     # ports:
     #   - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       churn-api:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
     build: .
     container_name: churn_api_service
     environment:
-      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
     ports:
       - "8000:8000"
     volumes:
@@ -94,7 +94,7 @@ services:
     ports:
       - "3101:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
     volumes:
       - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
@@ -112,9 +112,9 @@ services:
     image: postgres:15-alpine
     container_name: churn_db
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: churn_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -125,8 +125,8 @@ services:
     image: dpage/pgadmin4
     container_name: churn_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "5050:80"
     depends_on:
@@ -177,8 +177,8 @@ services:
       - redis
       - db
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/churn_db
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
       - PYTHONPATH=.
     volumes:
       - .:/app
