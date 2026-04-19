@@ -40,7 +40,7 @@ This document explains the system using a workflow style similar to the referenc
 
 ---
 
-## 3) Prediction Request Workflow
+## 3) Prediction Request Workflow 
 
 ```text
 +--------------------------------------------------------------+
